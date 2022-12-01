@@ -135,8 +135,24 @@ services:
       - redis
     networks:
       - elevate_net
+  bpp-catalog:
+    build: '../mentoring-bpp-catalog-service/'
+    container_name: elevate-catalog
+    image: elevate/catalog:1.0
+    volumes:
+      - ../mentoring-bpp-catalog-service/src/:/var/src
+    ports:
+      - '3009:3009'
+    command: ['nodemon', 'app.js']
+    depends_on:
+      - redis
+    networks:
+      - elevate_net
+      - elevate_elastic
 networks:
   elevate_net:
+    external: false
+  elevate_elastic:
     external: false
 volumes:
   zookeeper-data:
