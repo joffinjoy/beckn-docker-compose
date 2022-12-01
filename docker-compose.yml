@@ -166,6 +166,7 @@ services:
     image: docker.elastic.co/logstash/logstash:8.5.2
     ports:
       - '9600:9600'
+      - '9700:9700'
     environment:
       - "xpack.monitoring.enabled=true"
     volumes:
