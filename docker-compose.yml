@@ -161,6 +161,8 @@ services:
       - "xpack.security.enabled=false"
     networks:
       - elevate_elastic
+    logging:
+      driver: none
   logstash:
     container_name: elevate-logstash
     image: docker.elastic.co/logstash/logstash:8.5.2
@@ -185,6 +187,8 @@ services:
     depends_on:
       - elasticsearch
       - logstash
+    logging:
+      driver: none
 networks:
   elevate_net:
     external: false
