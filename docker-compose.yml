@@ -53,10 +53,10 @@ services:
     logging:
       driver: none
   mentoring:
-    build: './'
+    build: '../mentoring/'
     image: elevate/mentoring:1.0
     volumes:
-      - ./src/:/var/src
+      - ../mentoring/src/:/var/src
     ports:
       - '3000:3000'
     command: ['nodemon', 'app.js']
