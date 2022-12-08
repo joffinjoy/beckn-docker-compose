@@ -29,8 +29,9 @@ services:
     logging:
       driver: none
   kafka-connect:
-    image: confluentinc/cp-kafka-connect:latest
+    image: joffinjoy/kafka-connect-elasticsearch:0.1.0
     hostname: kafka-connect
+    container_name: kafka-connect
     depends_on:
       - zookeeper
       - kafka
@@ -51,8 +52,32 @@ services:
       CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_REST_ADVERTISED_HOST_NAME: connect
       CONNECT_LOG4J_ROOT_LOGLEVEL: "ERROR"
+      CONNECT_ZOOKEEPER_CONNECT: zookeeper:2181
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      REPLICATION_FACTOR: 3
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - $PWD/data:/data
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.3.0
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      - kafka
+      - zookeeper
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: kafka:9092
+      SCHEMA_REGISTRY_ZOOKEEPER_CONNECT: zookeeper:2181
+    networks:
+      - elevate_net
   mongo:
     image: 'mongo:4.4.14'
     container_name: elevate-mongo
@@ -93,6 +118,8 @@ services:
       - mongo
     networks:
       - elevate_net
+    logging:
+      driver: none
   user:
     build: '../user/'
     image: elevate/user:1.0
@@ -112,6 +139,8 @@ services:
       - redis
     networks:
       - elevate_net
+    logging:
+      driver: none
   notification:
     build: '../notification/'
     image: elevate/notification:1.0
@@ -128,6 +157,8 @@ services:
       - mongo
     networks:
       - elevate_net
+    logging:
+      driver: none
   bap:
     build: '../mentoring-bap-service/'
     container_name: elevate-bap
@@ -141,6 +172,8 @@ services:
       - redis
     networks:
       - elevate_net
+    logging:
+      driver: none
   bpp:
     build: '../mentoring-bpp-service/'
     container_name: elevate-bpp
@@ -154,6 +187,8 @@ services:
       - redis
     networks:
       - elevate_net
+    logging:
+      driver: none
   bpp-catalog:
     build: '../mentoring-bpp-catalog-service/'
     container_name: elevate-catalog
@@ -169,6 +204,8 @@ services:
     networks:
       - elevate_net
       - elevate_elastic
+    logging:
+      driver: none
   elasticsearch:
     container_name: elevate-elasticsearch
     image: docker.elastic.co/elasticsearch/elasticsearch:8.5.2
@@ -199,6 +236,8 @@ services:
     depends_on:
       - elasticsearch
       - kafka
+    logging:
+      driver: none
   kibana:
     container_name: elevate-kibana
     image: docker.elastic.co/kibana/kibana:8.5.2
