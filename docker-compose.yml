@@ -1,37 +1,85 @@
 version: '3'
 services:
   zookeeper:
-    image: 'bitnami/zookeeper:3.8.0'
+    image: 'confluentinc/cp-zookeeper:7.3.0'
     container_name: elevate-zookeeper
     ports:
       - '2181:2181'
     environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
     networks:
       - elevate_net
-    volumes:
-      - zookeeper-data:/bitnami/zookeeper
+      - elevate_elastic
     logging:
       driver: none
   kafka:
-    image: 'bitnami/kafka:3.1.0'
+    image: confluentinc/cp-kafka:7.3.0
     container_name: elevate-kafka
     ports:
       - '9092:9092'
+      - '29092:29092'
     environment:
-      - KAFKA_BROKER_ID=1
-      - KAFKA_CFG_LISTENERS=CLIENT://:9092,EXTERNAL://:9093
-      - KAFKA_CFG_ADVERTISED_LISTENERS=CLIENT://kafka:9092,EXTERNAL://localhost:9093
-      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-      - ALLOW_PLAINTEXT_LISTENER=yes
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
-      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=CLIENT
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     depends_on:
       - zookeeper
     networks:
       - elevate_net
-    volumes:
-      - kafka-data:/bitnami/kafka
+      - elevate_elastic
+    logging:
+      driver: none
+  kafka-connect:
+    image: joffinjoy/kafka-connect-elasticsearch:0.1.0
+    hostname: kafka-connect
+    container_name: kafka-connect
+    depends_on:
+      - zookeeper
+      - schema-registry
+    ports:
+      - "8083:8083"
+    networks:
+      - elevate_net
+      - elevate_elastic
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: 'kafka:29092'
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
+      CONNECT_GROUP_ID: compose-connect-group
+      CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
+      CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
+      CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
+    logging:
+      driver: none
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.3.0
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:29092'
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    networks:
+      - elevate_net
+      - elevate_elastic
     logging:
       driver: none
   mongo:
@@ -64,7 +112,7 @@ services:
       - ../mentoring/src/:/var/src
     ports:
       - '3000:3000'
-    command: ['nodemon', 'app.js']
+    command: [ 'nodemon', 'app.js' ]
     environment:
       - MONGODB_URL=mongodb://mongo:27017/elevate-mentoring
       - KAFKA_URL=kafka:9092
@@ -82,7 +130,7 @@ services:
       - ../user/src/:/var/src
     ports:
       - '3001:3001'
-    command: ['nodemon', 'app.js']
+    command: [ 'nodemon', 'app.js' ]
     environment:
       - MONGODB_URL=mongodb://mongo:27017/elevate-mentoring
       - KAFKA_URL=kafka:9092
@@ -101,7 +149,7 @@ services:
       - ../notification/src/:/var/src
     ports:
       - '3002:3002'
-    command: ['nodemon', 'app.js']
+    command: [ 'nodemon', 'app.js' ]
     environment:
       - KAFKA_HOST=kafka:9092
     depends_on:
@@ -117,7 +165,7 @@ services:
       - ../mentoring-bap-service/src/:/var/src
     ports:
       - '3004:3004'
-    command: ['nodemon', 'app.js']
+    command: [ 'nodemon', 'app.js' ]
     depends_on:
       - redis
     networks:
@@ -130,7 +178,7 @@ services:
       - ../mentoring-bpp-service/src/:/var/src
     ports:
       - '3005:3005'
-    command: ['nodemon', 'app.js']
+    command: [ 'nodemon', 'app.js' ]
     depends_on:
       - redis
     networks:
@@ -143,9 +191,10 @@ services:
       - ../mentoring-bpp-catalog-service/src/:/var/src
     ports:
       - '3009:3009'
-    command: ['nodemon', 'app.js']
+    command: [ 'nodemon', 'app.js' ]
     depends_on:
       - redis
+      - kafka
     networks:
       - elevate_net
       - elevate_elastic
@@ -175,8 +224,12 @@ services:
       - ./pipeline/:/usr/share/logstash/pipeline/
     networks:
       - elevate_elastic
+      - elevate_net
     depends_on:
       - elasticsearch
+      - kafka
+    logging:
+      driver: none
   kibana:
     container_name: elevate-kibana
     image: docker.elastic.co/kibana/kibana:8.5.2
