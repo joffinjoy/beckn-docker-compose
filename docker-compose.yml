@@ -41,7 +41,6 @@ services:
     container_name: kafka-connect
     depends_on:
       - zookeeper
-      - schema-registry
     ports:
       - "8083:8083"
     networks:
@@ -164,6 +163,7 @@ services:
     command: [ 'nodemon', 'app.js' ]
     depends_on:
       - redis
+      - mongo
     networks:
       - elevate_net
   bpp-catalog:
