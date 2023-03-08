@@ -174,10 +174,12 @@ services:
       - ../mentoring-bpp-catalog-service/src/:/var/src
     ports:
       - '3009:3009'
-    command: [ 'nodemon', 'app.js' ]
+    command: [ 'nodemon', '--trace-warnings','app.js' ]
     depends_on:
       - redis
       - kafka
+    environment:
+      - KAFKAJS_NO_PARTITIONER_WARNING=1
     networks:
       - elevate_net
       - elevate_elastic
