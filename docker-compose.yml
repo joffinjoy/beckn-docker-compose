@@ -197,6 +197,17 @@ services:
       - elevate_elastic
     logging:
       driver: none
+  couchdb:
+    image: couchdb:latest
+    container_name: elevate-couchdb
+    restart: unless-stopped
+    ports:
+      - "5984:5984"
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=password
+    volumes:
+      - couchdb-data:/opt/couchdb/data
 networks:
   elevate_net:
     external: false
@@ -206,3 +217,4 @@ volumes:
   zookeeper-data:
   kafka-data:
   mongo-data:
+  couchdb-data:
