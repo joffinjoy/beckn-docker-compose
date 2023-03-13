@@ -197,24 +197,96 @@ services:
       - elevate_elastic
     logging:
       driver: none
-  couchdb:
+  couchdb1:
     image: couchdb:latest
-    container_name: elevate-couchdb
+    container_name: elevate-couchdb1
     restart: unless-stopped
+    hostname: couchdb1
+    networks:
+      couchdb_net:
+        ipv4_address: 172.16.238.11
+      elevate_net:
+    #command: >-
+    #  -setcookie brumbrum
+    #  -kernel inet_dist_listen_min 9100 
+    #  -kernel inet_dist_listen_max 9100
     ports:
       - "5984:5984"
     environment:
       - COUCHDB_USER=admin
       - COUCHDB_PASSWORD=password
+      - COUCHDB_SECRET=couchdbsecret
+      - NODENAME=172.16.238.11
+      - ERL_FLAGS=-setcookie "brumbrum"
     volumes:
-      - couchdb-data:/opt/couchdb/data
+      - couchdb1-data:/opt/couchdb/data
+    logging:
+      driver: none
+  couchdb2:
+    image: couchdb:latest
+    container_name: elevate-couchdb2
+    restart: unless-stopped
+    hostname: couchdb2
+    #command: >-
+    #  -setcookie brumbrum
+    #  -kernel inet_dist_listen_min 9101 
+    #  -kernel inet_dist_listen_max 9101
+    #ports:
+    #  - "5985:5984"
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=password
+      - COUCHDB_SECRET=couchdbsecret
+      - NODENAME=172.16.238.12
+      - ERL_FLAGS=-setcookie "brumbrum"
+    volumes:
+      - couchdb2-data:/opt/couchdb/data
+    networks:
+      couchdb_net:
+        ipv4_address: 172.16.238.12
+      elevate_net:
+    logging:
+      driver: none
+  couchdb3:
+    image: couchdb:latest
+    container_name: elevate-couchdb3
+    restart: unless-stopped
+    hostname: couchdb3
+    #command: >-
+    #  -setcookie brumbrum
+    #  -kernel inet_dist_listen_min 9102 
+    #  -kernel inet_dist_listen_max 9102
+    #ports:
+    #  - "5986:5984"
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=password
+      - COUCHDB_SECRET=couchdbsecret
+      - NODENAME=172.16.238.13
+      - ERL_FLAGS=-setcookie "brumbrum"
+    volumes:
+      - couchdb3-data:/opt/couchdb/data
+    networks:
+      couchdb_net:
+        ipv4_address: 172.16.238.13
+      elevate_net:
+    logging:
+      driver: none
 networks:
   elevate_net:
     external: false
   elevate_elastic:
     external: false
+  couchdb_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.238.0/24
 volumes:
   zookeeper-data:
   kafka-data:
   mongo-data:
-  couchdb-data:
+  couchdb1-data:
+  couchdb2-data:
+  couchdb3-data:
